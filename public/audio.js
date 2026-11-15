@@ -3,7 +3,7 @@
 (function (root) {
   var TRACKS = [
     { src: '/audio/waves.mp3', vol: 0.30 }, // คลื่นทะเล วนต่อเนื่อง
-    { src: '/audio/bgm.mp3', vol: 0.08 }    // เพลงพื้นหลัง
+    { src: '/audio/bgm.mp3', vol: 0.03 }    // เพลงพื้นหลัง
   ];
   function ls(k, v) {
     try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { /* ignore */ }
