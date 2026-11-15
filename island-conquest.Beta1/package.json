@@ -1,8 +1,0 @@
-{
-  "name": "island-conquest-online",
-  "version": "2.0.0",
-  "private": true,
-  "description": "Island Conquest – ศึกชิงเกาะ (ออนไลน์บน Vercel + Upstash Redis)",
-  "engines": { "node": ">=18" },
-  "scripts": { "dev": "node dev.js", "test": "node test-online.js" }
-}
