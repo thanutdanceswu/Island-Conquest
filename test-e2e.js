@@ -95,6 +95,8 @@ global.__IC_RANDINT = (n) => (n === 6 && dice.length ? dice.shift() - 1 : crypto
   console.log('เจ้าของห้องข้ามเทิร์น + จบเกม');
   await A.click('#gTop [data-act="rules"]'); await A.waitForSelector('[data-act="hostSkip"]'); ok('เจ้าของห้องเห็นเครื่องมือข้ามเทิร์นใน 📖');
   await B.click('#gTop [data-act="rules"]'); assert.strictEqual(await B.locator('[data-act="hostSkip"]').count(), 0); ok('ผู้เล่นอื่นไม่เห็นเครื่องมือนี้');
+  assert.strictEqual(await B.locator('[data-act="endGame"]').count(), 0); assert.strictEqual(await B.locator('[data-act="exitRoom"]').count(), 1); ok('ผู้เล่นทั่วไปเห็นปุ่มออกจากห้อง แต่ไม่เห็นปุ่มจบเกม');
+  assert.strictEqual(await A.locator('[data-act="endGame"]').count(), 1); ok('เจ้าของห้องเห็นปุ่มจบเกมกลางคัน');
   await B.click('.modal .x');
   await A.click('.modal .x');
   let startCell = -1;
@@ -114,6 +116,17 @@ global.__IC_RANDINT = (n) => (n === 6 && dice.length ? dice.shift() - 1 : crypto
   await sleep(500); await B.screenshot({ path: path.join(SHOTS, 'o3-over.png') });
   await A.click('[data-act="reset"]'); await B.waitForSelector('.colors', { timeout: 4000 }); ok('เริ่มรอบใหม่ → ทุกคนกลับห้องรอ');
 
+  console.log('จบเกมกลางคัน / ออกจากห้อง');
+  await A.click('[data-act="start"]'); await A.waitForSelector('#gBoard .tk'); await B.waitForSelector('#gBoard .tk', { timeout: 4000 });
+  A.once('dialog', (d) => d.accept()); B.once('dialog', (d) => d.accept());
+  await A.click('#gTop [data-act="rules"]'); await A.click('[data-act="endGame"]');
+  await A.waitForSelector('.colors'); await B.waitForSelector('.colors', { timeout: 4000 }); ok('เจ้าของห้องจบเกมกลางคัน → ทุกคนกลับห้องรอ');
+  await B.click('[data-act="leave"]'); await B.waitForSelector('#name'); ok('ห้องรอ: ออกจากห้องได้ (ปุ่มเดิม)');
+  await B.fill('#name', 'บอย'); await B.click('[data-act="join"]'); await B.waitForSelector('.colors');
+  await A.click('[data-act="start"]'); await B.waitForSelector('#gBoard .tk', { timeout: 4000 });
+  await B.click('#gTop [data-act="rules"]'); await B.click('[data-act="exitRoom"]');
+  await B.waitForSelector('[data-act="createRoom"]'); assert.strictEqual(await B.evaluate(() => window.__ic.ui.room), ''); ok('ระหว่างเล่น: ผู้เล่นกด “ออกจากห้องนี้” → กลับหน้าแรก');
+  assert.strictEqual((await getG()).players.length, 2); ok('ที่นั่งของเขายังอยู่ในห้อง (กลับมาได้)');
   assert.deepStrictEqual(errors, [], errors.join('\n')); ok('ไม่มี JS error');
   await browser.close(); console.log('\nผ่านทั้งหมด ' + passed + ' ข้อ'); process.exit(0);
 })().catch((e) => { console.error('\n✗ ล้มเหลว:', e && e.stack || e); process.exit(1); });
