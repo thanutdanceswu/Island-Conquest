@@ -30,6 +30,38 @@
     if (f) f.textContent = AU && !AU.isOn() ? '🔇' : '🔊';
     cache.top = '';
   }
+  // ---- ลูกเต๋ากลางจอ
+  var PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  var diceEl = null, diceTimers = [], diceAnimId = null;
+  function faceHtml(n) { var h = ''; for (var i = 0; i < 9; i++) h += '<i class="' + (PIPS[n].indexOf(i) >= 0 ? 'p' : '') + '"></i>'; return h; }
+  function showDice(value, who) {
+    if (!diceEl) { diceEl = document.createElement('div'); diceEl.id = 'diceOv'; document.body.appendChild(diceEl); }
+    diceTimers.forEach(clearTimeout); diceTimers = [];
+    diceEl.className = '';
+    diceEl.innerHTML = '<div class="dshadow"></div><div class="dicebox rolling"><div class="face">' + faceHtml(1 + Math.floor(Math.random() * 6)) + '</div></div><div class="dlabel"></div>';
+    void diceEl.offsetWidth; diceEl.className = 'show';
+    var box = diceEl.querySelector('.dicebox'), face = box.querySelector('.face'), label = diceEl.querySelector('.dlabel');
+    label.textContent = who + ' กำลังทอยเต๋า…';
+    var cyc = setInterval(function () { face.innerHTML = faceHtml(1 + Math.floor(Math.random() * 6)); }, 75);
+    diceTimers.push(cyc);
+    diceTimers.push(setTimeout(function () {
+      clearInterval(cyc);
+      face.innerHTML = faceHtml(value); box.classList.remove('rolling'); box.classList.add('land');
+      label.innerHTML = esc2(who) + ' ทอยได้ <b>' + value + '</b>';
+    }, 800));
+    diceTimers.push(setTimeout(function () { diceEl.className = 'show out'; }, 2000));
+    diceTimers.push(setTimeout(function () { diceEl.className = ''; diceEl.innerHTML = ''; }, 2400));
+  }
+  function esc2(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function diceTick() {
+    var d = state.dice, id = d ? d.id : 0;
+    if (diceAnimId !== null && d && !d.rolling && id !== diceAnimId && state.phase === 'playing') {
+      var p = state.players.filter(function (x) { return x.id === d.playerId; })[0];
+      showDice(d.value, p ? (state.you && p.id === state.you.id ? 'คุณ' : p.name) : 'ผู้เล่น');
+    }
+    diceAnimId = id;
+  }
+
   function playSounds() {
     var s = state, myId = s.you ? s.you.id : null;
     var maxFx = snd.fx;
@@ -255,7 +287,7 @@
     if (overKey !== prevOverKey) { ui.closedOver = false; prevOverKey = overKey; }
     if (state.phase === 'lobby') { ui.closedOver = false; ui.sel = null; ui.menu = null; }
     if (state.you && state.phase !== 'lobby') normalizeSel();
-    if (state.you) playSounds();
+    if (state.you) { diceTick(); playSounds(); }
     renderAll();
   }
 
