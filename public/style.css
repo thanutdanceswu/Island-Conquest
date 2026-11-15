@@ -251,3 +251,102 @@ body.ingame { overflow: hidden; background: #082f49; }
 
 .sndfloat { position: fixed; top: calc(10px + env(safe-area-inset-top)); right: 10px; z-index: 40; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.92); font-size: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
 .sndfloat[hidden] { display: none; }
+
+/* ======================= รอบปรับแสงเงา / มิติ ======================= */
+:root {
+  --sh1: 0 1px 2px rgba(8,47,73,.18), 0 3px 8px rgba(8,47,73,.14);
+  --sh2: 0 2px 4px rgba(8,47,73,.16), 0 10px 24px rgba(8,47,73,.22);
+  --sh3: 0 4px 8px rgba(8,47,73,.2), 0 22px 48px rgba(8,47,73,.38);
+  --shine: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 0 rgba(0,0,0,.12);
+}
+body:not(.ingame) {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255,255,255,.9) 0 2px, transparent 3px),
+    radial-gradient(circle at 84% 14%, rgba(255,255,255,.8) 0 3px, transparent 4px),
+    radial-gradient(circle at 30% 42%, rgba(255,255,255,.7) 0 2px, transparent 3px),
+    radial-gradient(circle at 92% 58%, rgba(255,255,255,.7) 0 4px, transparent 5px),
+    radial-gradient(ellipse at 50% -10%, #ffffff 0%, rgba(255,255,255,0) 55%),
+    linear-gradient(180deg, #bae6fd 0%, #e0f2fe 38%, #bfdbfe 100%);
+  background-attachment: fixed;
+}
+
+/* ปุ่ม: ไล่สี มีแสงสะท้อนด้านบน และกดจมลง */
+.btn { box-shadow: var(--shine), var(--sh1); text-shadow: 0 1px 0 rgba(0,0,0,.15); transition: transform .12s, box-shadow .12s, filter .12s; }
+.btn:active:not(:disabled) { transform: translateY(3px) scale(.985); filter: brightness(.96); }
+.btn-primary { background: linear-gradient(180deg, #38bdf8, #0284c7); box-shadow: var(--shine), 0 4px 0 #075985, 0 8px 14px rgba(2,132,199,.35); }
+.btn-ok { background: linear-gradient(180deg, #34d399, #059669); box-shadow: var(--shine), 0 4px 0 #065f46, 0 8px 14px rgba(5,150,105,.35); }
+.btn-warn { background: linear-gradient(180deg, #fcd34d, #f59e0b); box-shadow: var(--shine), 0 4px 0 #b45309, 0 8px 14px rgba(245,158,11,.4); text-shadow: 0 1px 0 rgba(255,255,255,.35); }
+.btn-soft { background: linear-gradient(180deg, #ffffff, #f0f9ff); box-shadow: inset 0 1px 0 #fff, 0 2px 0 var(--sea2), var(--sh1); text-shadow: none; }
+.btn-primary:active:not(:disabled), .btn-ok:active:not(:disabled), .btn-warn:active:not(:disabled) { box-shadow: var(--shine), 0 1px 0 rgba(0,0,0,.4); }
+.btn:disabled { box-shadow: var(--shine); filter: saturate(.6); }
+
+/* การ์ดกล่อง/หน้าต่าง: นูนและโปร่งแสงเล็กน้อย */
+.card-box { background: linear-gradient(180deg, #ffffff, #f4faff); box-shadow: inset 0 1px 0 #fff, var(--sh2); border: 1px solid rgba(186,230,253,.9); }
+.modal { background: linear-gradient(180deg, #ffffff 0%, #f1f9ff 100%); box-shadow: inset 0 1px 0 #fff, var(--sh3); border: 1px solid rgba(255,255,255,.8); }
+.ov { background: radial-gradient(ellipse at 50% 30%, rgba(14,116,144,.7), rgba(8,47,73,.9)); }
+.coverbox { box-shadow: 0 2px 4px rgba(8,47,73,.2), 0 18px 40px rgba(8,47,73,.45); transform: perspective(800px) rotateX(2deg); }
+.title { text-shadow: 0 2px 0 rgba(255,255,255,.7), 0 6px 14px rgba(12,74,110,.25); }
+.colorpick { box-shadow: var(--sh1); transition: transform .15s, box-shadow .15s; }
+.colorpick.on { transform: translateY(-3px) scale(1.02); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent), var(--sh2); }
+.tokimg { box-shadow: 0 0 0 3px var(--c, #fff), 0 4px 8px rgba(0,0,0,.35), inset 0 -4px 6px rgba(0,0,0,.18); }
+.tokimg.sm { box-shadow: 0 0 0 2px var(--c, #fff), 0 2px 5px rgba(0,0,0,.35); }
+.tokimg.xs { box-shadow: 0 0 0 2px var(--c, #fff), 0 1px 3px rgba(0,0,0,.35); }
+.roster li { transition: background .2s; }
+
+/* ฉากในเกม: ทะเลลึก มีแสงจากด้านบน */
+body.ingame, #game {
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -10%, rgba(125,211,252,.35), transparent 60%),
+    linear-gradient(180deg, #0c4a6e 0%, #082f49 55%, #04202f 100%);
+}
+.topbar { background: linear-gradient(180deg, #0e7490 0%, #0c4a6e 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 4px 14px rgba(0,0,0,.45); position: relative; z-index: 6; }
+.topbar .tokimg.sm { box-shadow: 0 0 0 2px #fff, 0 0 12px color-mix(in srgb, var(--c) 70%, transparent), 0 3px 6px rgba(0,0,0,.4); }
+.iconbtn { background: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,.1)); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 2px 5px rgba(0,0,0,.3); }
+.die { background: linear-gradient(145deg, #ffffff, #dbeafe); box-shadow: inset 0 -3px 5px rgba(30,64,175,.2), inset 0 2px 3px #fff, 0 3px 0 #93c5fd, 0 6px 12px rgba(0,0,0,.35); }
+
+/* แถบผู้เล่น: ชิปนูน เรืองแสงเมื่อถึงเทิร์น */
+#gPlayers .players { background: linear-gradient(180deg, #0c4a6e, #0a3d5c); box-shadow: 0 4px 10px rgba(0,0,0,.35); position: relative; z-index: 5; }
+#gPlayers .pl { background: linear-gradient(180deg, #ffffff, #e8f5ff); border-color: rgba(255,255,255,.7); box-shadow: inset 0 1px 0 #fff, 0 3px 6px rgba(0,0,0,.35); }
+#gPlayers .pl.turn { background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--c) 18%, #fff)); box-shadow: 0 0 0 2px var(--c), 0 0 16px color-mix(in srgb, var(--c) 75%, transparent), 0 4px 8px rgba(0,0,0,.35); animation: turnglow 1.8s ease-in-out infinite; }
+@keyframes turnglow { 0%,100% { box-shadow: 0 0 0 2px var(--c), 0 0 8px color-mix(in srgb, var(--c) 55%, transparent), 0 4px 8px rgba(0,0,0,.35); } 50% { box-shadow: 0 0 0 2px var(--c), 0 0 20px color-mix(in srgb, var(--c) 90%, transparent), 0 4px 8px rgba(0,0,0,.35); } }
+
+/* กระดาน: กรอบนูน เงาด้านใน แสงสะท้อน */
+.boardwrap { background: #0e7490; box-shadow: inset 0 6px 14px rgba(0,0,0,.45), inset 0 -6px 14px rgba(0,0,0,.35); }
+.boardwrap::before { content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none; background: radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(4,32,47,.55) 100%), linear-gradient(180deg, rgba(255,255,255,.1), transparent 18%); }
+.zoombtns { z-index: 7; }
+.zoombtns button { background: linear-gradient(180deg, #ffffff, #dbeafe); box-shadow: inset 0 1px 0 #fff, 0 3px 0 #93c5fd, 0 6px 12px rgba(0,0,0,.4); }
+.bv-img { filter: saturate(1.08) contrast(1.03); }
+
+/* ตัวเล่น: เหรียญลอย มีเงาบนพื้นและประกายสะท้อน */
+.tk { border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(8,47,73,.55), 0 8px 10px rgba(0,0,0,.45), 0 2px 3px rgba(0,0,0,.4), inset 0 -6px 8px rgba(0,0,0,.2); }
+.tk::after { content: ''; position: absolute; left: 14%; top: 8%; width: 55%; height: 38%; border-radius: 50%; background: radial-gradient(ellipse at 40% 30%, rgba(255,255,255,.75), rgba(255,255,255,0) 70%); pointer-events: none; }
+.tk.sel { outline: 5px solid #4ade80; box-shadow: 0 0 22px #22c55e, 0 10px 12px rgba(0,0,0,.5); animation: lift .9s ease-in-out infinite; }
+.tk.pick { box-shadow: 0 0 18px #facc15, 0 8px 10px rgba(0,0,0,.45); }
+.tk.tgt { box-shadow: 0 0 20px #fb7185, 0 8px 10px rgba(0,0,0,.45); }
+@keyframes lift { 0%,100% { margin-top: 0; } 50% { margin-top: -5px; } }
+.hlc { box-shadow: 0 0 16px rgba(250,204,21,.8), inset 0 0 14px rgba(255,255,255,.5); }
+.hld { box-shadow: 0 0 22px rgba(34,197,94,.9), inset 0 0 16px rgba(255,255,255,.5); }
+.hlp { box-shadow: 0 0 10px rgba(34,197,94,.9), 0 2px 4px rgba(0,0,0,.4); }
+.own { box-shadow: 0 0 22px var(--c), inset 0 0 18px var(--c), 0 0 0 2px rgba(255,255,255,.5); }
+
+/* แผงข้อความ / แถบไพ่ */
+.panel { background: linear-gradient(180deg, #ffffff, #eaf6ff); border-top: 3px solid var(--sea2); box-shadow: 0 -6px 14px rgba(0,0,0,.28); position: relative; z-index: 5; }
+.panel.mine { background: linear-gradient(180deg, #f0fdf4, #d1fae5); box-shadow: 0 -6px 14px rgba(0,0,0,.28), inset 0 2px 0 #6ee7b7; }
+.panel.wait { background: linear-gradient(180deg, #f5f3ff, #e0e7ff); }
+.handstrip { background: linear-gradient(180deg, #0a3d5c, #07324d); box-shadow: inset 0 4px 8px rgba(0,0,0,.4); padding-top: 10px; padding-bottom: 8px; }
+.hc { transition: transform .15s; transform-origin: 50% 100%; }
+.hc:nth-child(odd) { transform: rotate(-2deg); } .hc:nth-child(even) { transform: rotate(2deg) translateY(2px); }
+.hc:active { transform: translateY(-8px) scale(1.08) rotate(0); }
+.hc img { filter: drop-shadow(0 4px 5px rgba(0,0,0,.6)) drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+.dock { background: linear-gradient(180deg, #ffffff, #dbeafe); border-top: 1px solid #fff; box-shadow: 0 -4px 12px rgba(0,0,0,.35); position: relative; z-index: 6; }
+
+/* หน้าต่างตอบโต้ / ตารางผล */
+.sheet { background: linear-gradient(180deg, #ffffff, #eef2ff); box-shadow: 0 -10px 40px rgba(0,0,0,.55), 0 0 0 3px rgba(129,140,248,.5), 0 0 30px rgba(99,102,241,.45); }
+.react-row button { background: linear-gradient(180deg, #ffffff, #e0e7ff); box-shadow: inset 0 1px 0 #fff, 0 3px 0 #a5b4fc, 0 6px 10px rgba(67,56,202,.25); }
+.react-row img { filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
+.modal .cardimg { filter: drop-shadow(0 4px 4px rgba(0,0,0,.3)) drop-shadow(0 18px 22px rgba(15,23,42,.45)); }
+.trow { background: linear-gradient(180deg, #ffffff, #f1f5f9); box-shadow: inset 0 1px 0 #fff, 0 2px 5px rgba(0,0,0,.12); }
+.trow.win { box-shadow: 0 0 0 2px var(--c), 0 0 18px color-mix(in srgb, var(--c) 55%, transparent); }
+.toast { background: linear-gradient(180deg, #1e293b, #0f172a); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 12px 28px rgba(0,0,0,.5); }
+.flag { box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 2px 5px rgba(0,0,0,.35); }
+@media (prefers-reduced-motion: reduce) { .tk.sel, #gPlayers .pl.turn { animation: none !important; } }
