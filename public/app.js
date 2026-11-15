@@ -24,6 +24,36 @@
   var cache = { app: '', top: '', pl: '', panel: '', hand: '', dock: '', ov: '' };
   var prevTurnId = null, prevPhase = null, prevOverKey = '', lastPlayedId = 0;
   var reachCache = { key: '', cells: [] };
+  var AU = window.IC.audio, snd = { init: false, fx: 0, dice: 0, frame: 0, over: '', reveal: 0 };
+  function updateSoundBtns() {
+    var f = document.getElementById('sndFloat');
+    if (f) f.textContent = AU && !AU.isOn() ? '🔇' : '🔊';
+    cache.top = '';
+  }
+  function playSounds() {
+    var s = state, myId = s.you ? s.you.id : null;
+    var maxFx = snd.fx;
+    (s.fx || []).forEach(function (f) { if (f.id > maxFx) maxFx = f.id; });
+    var dId = s.dice ? s.dice.id : 0, fr = s.you && s.you.window ? s.you.window.frameId : 0;
+    var ov = s.phase === 'over' && s.gameOver ? s.gameOver.title : '';
+    var rvId = s.reveal ? s.reveal.id : 0;
+    if (snd.init && s.phase !== 'lobby') {
+      (s.fx || []).filter(function (f) { return f.id > snd.fx; }).forEach(function (f) {
+        if (f.type === 'move') { var n = Math.min(f.path.length - 1, 12); for (var i = 0; i < n; i++) AU.sfx('step', i * 125); }
+        else if (f.type === 'kick') AU.sfx('kick');
+        else if (f.type === 'release') AU.sfx('release');
+        else if (f.type === 'swap') AU.sfx('swap');
+        else if (f.type === 'steal') AU.sfx('steal');
+      });
+      if (s.dice && !s.dice.rolling && dId !== snd.dice) AU.sfx('dice');
+      if (fr && fr !== snd.frame) AU.sfx('alert');
+      if (ov && ov !== snd.over) AU.sfx('win');
+      if (rvId && rvId !== snd.reveal && s.reveal.mode !== 'drawn' && s.reveal.playerId !== myId) {
+        var cid = s.reveal.cardId; AU.sfx(cid === 'shield' ? 'shield' : cid === 'reflect' ? 'reflect' : 'card');
+      }
+    }
+    snd.init = true; snd.fx = maxFx; snd.dice = dId; snd.frame = fr; snd.over = ov; snd.reveal = rvId;
+  }
 
   function toast(msg) {
     $toast.textContent = msg; $toast.hidden = false;
@@ -67,10 +97,10 @@
   function poll() {
     clearTimeout(pollTimer);
     if (!ui.room) { pollTimer = setTimeout(poll, 1000); return; }
-    var room = ui.room, hb = (pollN++ % 4 === 0) ? '1' : '0';
+    var room = ui.room, tk = token, hb = (pollN++ % 8 === 0) ? '1' : '0';
     var url = '/api/state?room=' + encodeURIComponent(room) + '&token=' + encodeURIComponent(token) + '&hb=' + hb + (rev != null ? '&rev=' + rev : '');
     request('GET', url).then(function (r) {
-      if (room !== ui.room) return; // เปลี่ยนห้องระหว่างรอ
+      if (room !== ui.room || tk !== token) return; // เปลี่ยนห้อง/ออกจากที่นั่งระหว่างรอ — ทิ้งคำตอบเก่า
       if (r.__net) { $conn.hidden = false; return; }
       $conn.hidden = true;
       if (r.error) {
@@ -79,7 +109,8 @@
       }
       if (r.same) return;
       apply(r);
-    }).then(function () { pollTimer = setTimeout(poll, document.hidden ? 5000 : (window.__pollMs || 2000)); });
+    }).then(function () { var fast = state && state.phase === 'playing' && ((state.frames && state.frames.length) || (state.you && state.turnPlayerId !== state.you.id));
+      pollTimer = setTimeout(poll, document.hidden ? 5000 : (window.__pollMs || (fast ? 700 : 1000))); });
   }
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { pollN = 0; poll(); } });
 
@@ -210,7 +241,7 @@
     var myTurn = state.you && state.phase === 'playing' && state.turnPlayerId === state.you.id;
     if (myTurn && prevTurnId !== state.turnPlayerId && prevPhase === 'playing') {
       try { if (navigator.vibrate) navigator.vibrate([180, 80, 180]); } catch (e) { /* ignore */ }
-      toast('🎯 ถึงเทิร์นของคุณแล้ว!');
+      toast('🎯 ถึงเทิร์นของคุณแล้ว!'); AU.sfx('turn', 150);
     }
     if (state.you && state.you.window && state.phase === 'playing') { try { if (navigator.vibrate) navigator.vibrate(120); } catch (e) { /* ignore */ } }
     if (state.lastPlayed && state.reveal && state.reveal.id !== lastPlayedId) {
@@ -224,6 +255,7 @@
     if (overKey !== prevOverKey) { ui.closedOver = false; prevOverKey = overKey; }
     if (state.phase === 'lobby') { ui.closedOver = false; ui.sel = null; ui.menu = null; }
     if (state.you && state.phase !== 'lobby') normalizeSel();
+    if (state.you) playSounds();
     renderAll();
   }
 
@@ -235,6 +267,7 @@
     var inGame = state && state.you && state.phase !== 'lobby';
     $app.hidden = !!inGame; $game.hidden = !inGame;
     document.body.classList.toggle('ingame', !!inGame);
+    var sf = document.getElementById('sndFloat'); if (sf) sf.hidden = !!inGame;
     if (!inGame) {
       var focused = document.activeElement && document.activeElement.id === 'name';
       var html = !ui.room ? V.landingScreen(ui) : !state ? '<div class="boot">🏝️<br>กำลังเชื่อมต่อ…</div>' : !state.you ? V.joinScreen(state, ui) : V.lobbyScreen(state, ui);
@@ -272,7 +305,13 @@
   var handlers = {
     join: doJoin,
     start: function () { act('start'); },
-    leave: function () { act('leave').then(function (r) { if (r && r.ok) { token = ''; ls(tokenKey(), null); rev = null; poll(); } }); },
+    leave: function () {
+      // ไม่ใช้ act() เพราะมันจะ apply สถานะใหม่ (ที่ไม่มีเราแล้ว) ทั้งที่ยังถือ token เก่า ทำให้ระบบเข้าห้องใหม่ให้เองโดยไม่ตั้งใจ
+      post('/api/action', { room: ui.room, token: token, type: 'leave' }).then(function (r) {
+        if (r.error) { toast(r.error); return; }
+        ls(tokenKey(), null); token = ''; rev = null; state = null; cache.app = ''; renderAll(); poll();
+      });
+    },
     createRoom: function () {
       ui.landingError = '';
       post('/api/create', {}).then(function (r) {
@@ -295,6 +334,15 @@
         if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(link).then(done, function () { window.prompt('คัดลอกลิงก์นี้', link); }); return; }
       } catch (e) { /* ignore */ }
       window.prompt('คัดลอกลิงก์นี้', link);
+    },
+    sound: function () { AU.toggle(); updateSoundBtns(); renderAll(); },
+    exitRoom: function () {
+      if (!window.confirm('ออกจากห้องนี้? ที่นั่งของคุณยังอยู่ กลับมาได้ด้วยลิงก์เดิมและชื่อเดิมภายใน 24 ชั่วโมง')) return;
+      ui.showRules = false; ui.landingError = ''; setRoom(''); renderAll();
+    },
+    endGame: function () {
+      if (!window.confirm('จบเกมนี้กลางคันและกลับห้องรอ? ความคืบหน้าของเกมจะหายทั้งหมด')) return;
+      ui.showRules = false; act('reset');
     },
     hostSkip: function () { ui.showRules = false; act('skip'); },
     hostForce: function () { ui.showRules = false; act('forcePass'); },
@@ -378,6 +426,7 @@
 
   var hashCode = (location.hash || '').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 4);
   setRoom(hashCode.length === 4 ? hashCode : (ls('ic_room') || ''));
+  AU.onChange(updateSoundBtns); updateSoundBtns();
   renderAll();
   poll();
 })();

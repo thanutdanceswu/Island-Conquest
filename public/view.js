@@ -150,6 +150,7 @@
     if (state.endScene && state.phase === 'playing') flags += '<span class="flag es">🪼 ปิดฉาก ' + (IC.END_SCENE_TURNS + 1 - state.endScene.turnsLeft) + '/' + IC.END_SCENE_TURNS + '</span>';
     return '<div class="topbar" style="--c:' + colorHex(me.color) + '">' + tok(me.color, 'sm') +
       '<div class="who"><b>' + esc(me.name) + '</b><small>' + label + ' • #' + state.turn.number + '</small></div>' + flags + dieHtml(state) +
+      '<button class="iconbtn" data-act="sound" aria-label="เปิด/ปิดเสียง">' + (root.IC && root.IC.audio && !root.IC.audio.isOn() ? '🔇' : '🔊') + '</button>' +
       '<button class="iconbtn" data-act="rules" aria-label="กติกา">📖</button></div>';
   }
 
@@ -312,6 +313,10 @@
         '<button class="btn btn-warn" data-act="hostSkip">⏭ ข้ามเทิร์น</button>' +
         (state.frames && state.frames.length ? '<button class="btn btn-warn" data-act="hostForce">⏩ ข้ามการตอบโต้</button>' : '') + '</div></div>';
     }
+    if (state.you && state.you.id === state.ownerId && state.phase === 'playing') {
+      owner += '<div class="ownertools"><b>จบเกมกลางคัน</b><div class="muted">กลับห้องรอ ทุกคนยังอยู่ในห้อง เริ่มรอบใหม่ได้</div><div class="prow"><button class="btn btn-warn" data-act="endGame">🏁 จบเกม กลับห้องรอ</button></div></div>';
+    }
+    if (state.you) owner += '<div class="prow" style="margin:8px 0"><button class="btn btn-soft" data-act="exitRoom">🚪 ออกจากห้องนี้ (กลับหน้าแรก)</button></div>';
     return '<div class="ov" data-act="closeRules"><div class="modal wide" data-stop="1"><button class="x" data-act="closeRules">✕</button>' +
       '<h3 class="title" style="margin:0 0 6px">📖 กติกาย่อ</h3>' + owner +
       '<ul class="tips"><li><span>เทิร์นละ 1 ทางเลือก: ทอยเต๋าแล้วเดิน หรือ จั่วไพ่ 1–2 ใบ (ใช้ไพ่ได้ตลอดเทิร์น แม้หลังทอย)</span></li>' +
