@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0c4a6e">
+  <title>Island Conquest – ศึกชิงเกาะ</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app"><div class="boot">🏝️<br>กำลังเชื่อมต่อ…</div></div>
+  <div id="game" hidden>
+    <div id="gTop"></div>
+    <div id="gPlayers"></div>
+    <div class="boardwrap">
+      <div id="gBoard"></div>
+      <div class="zoombtns">
+        <button data-act="zoomIn" aria-label="ซูมเข้า">＋</button>
+        <button data-act="zoomOut" aria-label="ซูมออก">－</button>
+        <button data-act="zoomFit" aria-label="พอดีจอ">⤢</button>
+      </div>
+    </div>
+    <div id="gPanel"></div>
+    <div id="gHand"></div>
+    <div id="gDock"></div>
+  </div>
+  <button id="sndFloat" class="sndfloat" data-act="sound" aria-label="เปิด/ปิดเสียง">🔊</button>
+  <div id="toast" class="toast" hidden></div>
+  <div id="conn" class="conn" hidden>⚠️ การเชื่อมต่อหลุด กำลังต่อใหม่…</div>
+  <script src="/cards.js"></script>
+  <script src="/audio.js"></script>
+  <script src="/board.js"></script>
+  <script src="/view.js"></script>
+  <script src="/boardview.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
