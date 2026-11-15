@@ -267,6 +267,7 @@
     var inGame = state && state.you && state.phase !== 'lobby';
     $app.hidden = !!inGame; $game.hidden = !inGame;
     document.body.classList.toggle('ingame', !!inGame);
+    AU.setInGame(!!inGame);
     var sf = document.getElementById('sndFloat'); if (sf) sf.hidden = !!inGame;
     if (!inGame) {
       var focused = document.activeElement && document.activeElement.id === 'name';

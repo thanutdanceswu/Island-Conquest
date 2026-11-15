@@ -2,27 +2,31 @@
    มือถือไม่ให้เล่นเสียงก่อนผู้ใช้แตะจอ จึงเริ่มหลังแตะครั้งแรก ปุ่ม 🔊/🔇 เปิดปิดได้ และจำค่าไว้ในเครื่อง */
 (function (root) {
   var TRACKS = [
-    { src: '/audio/waves.mp3', vol: 0.50 }, // คลื่นทะเล วนต่อเนื่อง
-    { src: '/audio/bgm.mp3', vol: 0.03 }    // เพลงพื้นหลัง
+    { src: '/audio/waves.mp3', vol: 0.30, gameOnly: true }, // คลื่นทะเล: เล่นเฉพาะตอนอยู่ในเกม (ตั้ง gameOnly: false ให้เล่นตลอด)
+    { src: '/audio/bgm.mp3', vol: 0.20 }    // เพลงพื้นหลัง
   ];
   function ls(k, v) {
     try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { /* ignore */ }
     return null;
   }
   var on = ls('ic_sound') !== '0';
-  var unlocked = false, els = [], ctx = null, listeners = [];
+  var unlocked = false, els = [], ctx = null, listeners = [], inGame = false;
 
   function build() {
     if (els.length) return;
     TRACKS.forEach(function (t) {
       var a = new Audio(t.src);
-      a.loop = true; a.preload = 'auto'; a.volume = t.vol;
+      a.loop = true; a.preload = t.gameOnly ? 'none' : 'auto'; a.volume = t.vol;
       els.push(a);
     });
   }
+  function wanted(i) { return !TRACKS[i].gameOnly || inGame; }
   function playMusic() {
     build();
-    els.forEach(function (a) { try { var p = a.play(); if (p && p.catch) p.catch(function () { /* ถูกบล็อก รอแตะอีกครั้ง */ }); } catch (e) { /* ignore */ } });
+    els.forEach(function (a, i) {
+      if (!wanted(i)) { try { a.pause(); } catch (e) { /* ignore */ } return; }
+      try { var p = a.play(); if (p && p.catch) p.catch(function () { /* ถูกบล็อก รอแตะอีกครั้ง */ }); } catch (e) { /* ignore */ }
+    });
   }
   function pauseMusic() { els.forEach(function (a) { try { a.pause(); } catch (e) { /* ignore */ } }); }
   function ensureCtx() {
@@ -40,6 +44,11 @@
     if (root.document.hidden) pauseMusic(); else if (on && unlocked) { playMusic(); ensureCtx(); }
   });
 
+  function setInGame(v) {
+    v = !!v; if (v === inGame) return;
+    inGame = v;
+    if (on && unlocked) playMusic();
+  }
   function notify() { listeners.forEach(function (f) { try { f(on); } catch (e) { /* ignore */ } }); }
   function toggle() {
     on = !on; ls('ic_sound', on ? '1' : '0');
@@ -80,5 +89,5 @@
   }
 
   root.IC = root.IC || {};
-  root.IC.audio = { isOn: function () { return on; }, toggle: toggle, sfx: sfx, onChange: function (f) { listeners.push(f); } };
+  root.IC.audio = { setInGame: setInGame, isOn: function () { return on; }, toggle: toggle, sfx: sfx, onChange: function (f) { listeners.push(f); } };
 })(window);
