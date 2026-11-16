@@ -158,7 +158,7 @@
     return '<div class="players" style="--n:' + state.players.length + '">' + state.players.map(function (p) {
       var turn = p.id === state.turnPlayerId && state.phase === 'playing';
       var base = p.pieces.filter(function (x) { return x.pos < 0; }).length;
-      return '<div class="pl' + (turn ? ' turn' : '') + '" style="--c:' + colorHex(p.color) + '">' +
+      return '<div class="pl' + (turn ? ' turn' : '') + '" data-pid="' + p.id + '" style="--c:' + colorHex(p.color) + '">' +
         '<div class="n">' + tok(p.color, 'xs') + '<span class="nm">' + esc(p.name) + '</span></div>' +
         '<div class="meta"><span title="เกาะ">🏝 ' + p.islands + '/' + B.ISLAND_WIN + '</span><span title="คะแนนบนกระดาน">⭐ ' + p.score + '</span></div>' +
         '<div class="meta"><span>🃏 ' + p.handCount + '</span><span>🏠 ' + base + '</span>' + (p.connected ? '' : '<span class="off">ออฟไลน์</span>') + '</div></div>';
@@ -241,7 +241,7 @@
     return '<div class="handstrip">' + sortHand(me.hand).map(function (c) {
       var ct = T[c.id];
       var dim = !!whyNotPlay(state, d, c);
-      return '<button class="hc' + (dim ? ' dim' : '') + '" data-act="cardMenu" data-uid="' + c.uid + '" aria-label="' + esc(ct.name) + '">' + cardImg(c.id) + '<span class="chip ' + ct.tagClass + '">' + esc(ct.tag) + '</span></button>';
+      return '<button class="hc' + (dim ? ' dim' : '') + ((ui.newUids || []).indexOf(c.uid) >= 0 ? ' new' : '') + '" data-act="cardMenu" data-uid="' + c.uid + '" aria-label="' + esc(ct.name) + '">' + cardImg(c.id) + '<span class="chip ' + ct.tagClass + '">' + esc(ct.tag) + '</span></button>';
     }).join('') + '<div class="hcount">' + me.hand.length + '/' + IC.MAX_HAND + '</div></div>';
   }
 

@@ -2,8 +2,8 @@
    มือถือไม่ให้เล่นเสียงก่อนผู้ใช้แตะจอ จึงเริ่มหลังแตะครั้งแรก ปุ่ม 🔊/🔇 เปิดปิดได้ และจำค่าไว้ในเครื่อง */
 (function (root) {
   var TRACKS = [
-    { src: '/audio/waves.mp3', vol: 0.50, gameOnly: true }, // คลื่นทะเล: เล่นเฉพาะตอนอยู่ในเกม (ตั้ง gameOnly: false ให้เล่นตลอด)
-    { src: '/audio/bgm.mp3', vol: 0.05 }    // เพลงพื้นหลัง
+    { src: '/audio/waves.mp3', vol: 0.30, gameOnly: true }, // คลื่นทะเล: เล่นเฉพาะตอนอยู่ในเกม (ตั้ง gameOnly: false ให้เล่นตลอด)
+    { src: '/audio/bgm.mp3', vol: 0.20 }    // เพลงพื้นหลัง
   ];
   function ls(k, v) {
     try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { /* ignore */ }

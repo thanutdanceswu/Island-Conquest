@@ -53,6 +53,77 @@
     diceTimers.push(setTimeout(function () { diceEl.className = ''; diceEl.innerHTML = ''; }, 2400));
   }
   function esc2(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  // ---- แบนเนอร์เทิร์น / ป๊อปอัปไพ่ / ลูกปลิวไพ่ขโมย / ไพ่ใหม่ / กระดาษสี
+  var bannerEl = null, bannerT = null, popEl = null, popT = null;
+  function showBanner(html, kind) {
+    if (!bannerEl) { bannerEl = document.createElement('div'); bannerEl.id = 'banner'; document.body.appendChild(bannerEl); }
+    clearTimeout(bannerT); bannerEl.className = ''; bannerEl.innerHTML = '<span class="bn">' + html + '</span>'; void bannerEl.offsetWidth;
+    bannerEl.className = 'show ' + (kind || '');
+    bannerT = setTimeout(function () { bannerEl.className = 'out ' + (kind || ''); }, kind === 'mine' ? 1500 : 1100);
+    setTimeout(function () { if (bannerEl && /out/.test(bannerEl.className)) bannerEl.className = ''; }, kind === 'mine' ? 1900 : 1500);
+  }
+  function cardPop(cardId, who, verb) {
+    if (!popEl) { popEl = document.createElement('div'); popEl.id = 'cardPop'; document.body.appendChild(popEl); }
+    clearTimeout(popT); popEl.className = ''; void popEl.offsetWidth;
+    popEl.innerHTML = '<div class="cp-in"><div class="cp-card"><img src="/cards/' + cardId + '.webp" alt="" draggable="false"></div><div class="cp-lbl">' + esc2(who) + ' ' + (verb || 'ใช้') + ' “' + esc2(T[cardId].name) + '”</div></div>';
+    popEl.className = 'show';
+    popT = setTimeout(function () { popEl.className = 'out'; setTimeout(function () { popEl.className = ''; popEl.innerHTML = ''; }, 350); }, 1350);
+  }
+  function flyCard(fromEl, toEl, label) {
+    if (!fromEl || !toEl || !fromEl.getBoundingClientRect) return;
+    var f = fromEl.getBoundingClientRect(), t = toEl.getBoundingClientRect();
+    var g = document.createElement('div'); g.className = 'flycard'; g.textContent = label || '🃏';
+    g.style.left = (f.left + f.width / 2 - 22) + 'px'; g.style.top = (f.top + f.height / 2 - 30) + 'px';
+    document.body.appendChild(g);
+    var dx = t.left + t.width / 2 - (f.left + f.width / 2), dy = t.top + t.height / 2 - (f.top + f.height / 2);
+    if (!g.animate) { setTimeout(function () { g.remove(); }, 300); return; }
+    var an = g.animate([
+      { transform: 'translate(0,0) rotate(-8deg) scale(.8)', opacity: 0 },
+      { transform: 'translate(' + dx * 0.2 + 'px,' + (dy * 0.2 - 50) + 'px) rotate(10deg) scale(1.2)', opacity: 1, offset: 0.25 },
+      { transform: 'translate(' + dx + 'px,' + dy + 'px) rotate(360deg) scale(.7)', opacity: 0.2 }
+    ], { duration: 750, easing: 'cubic-bezier(.4,0,.2,1)' });
+    an.onfinish = function () { g.remove(); };
+  }
+  function chipOf(pid) { return document.querySelector('#gPlayers .pl[data-pid="' + pid + '"]'); }
+  function boardFx(f) {
+    if (f.type === 'steal') flyCard(chipOf(f.victimId), chipOf(f.thiefId), '🃏');
+    else if (f.type === 'island') {
+      var p = state.players.filter(function (x) { return x.id === f.ownerId; })[0];
+      if (p) showBanner('🏝️ ' + esc2(state.you && p.id === state.you.id ? 'คุณ' : p.name) + ' ยึดเกาะ!', 'island');
+      AU.sfx('win');
+    } else if (f.type === 'stop') {
+      showBanner('✋ หยุดเดี๋ยวนี้!', 'stop'); AU.sfx('alert');
+    } else if (f.type === 'shield') AU.sfx('shield');
+    else if (f.type === 'reflect') AU.sfx('reflect');
+  }
+  function confetti() {
+    var c = document.createElement('div'); c.id = 'confetti';
+    var cols = ['#f43f5e', '#0ea5e9', '#10b981', '#f59e0b', '#a78bfa', '#fde047', '#ffffff'];
+    for (var i = 0; i < 70; i++) {
+      var s = document.createElement('i');
+      s.style.left = Math.random() * 100 + '%'; s.style.background = cols[i % cols.length];
+      s.style.animationDelay = (Math.random() * 0.8) + 's'; s.style.animationDuration = (2 + Math.random() * 1.8) + 's';
+      s.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px'); s.style.setProperty('--r', (Math.random() * 720 - 360) + 'deg');
+      s.style.width = (6 + Math.random() * 6) + 'px'; s.style.height = (10 + Math.random() * 8) + 'px';
+      c.appendChild(s);
+    }
+    document.body.appendChild(c); setTimeout(function () { c.remove(); }, 4800);
+  }
+  var prevHand = null;
+  function handTick() {
+    var uids = state.you ? state.you.hand.map(function (c) { return c.uid; }) : [];
+    if (prevHand && state.phase === 'playing') {
+      var added = uids.filter(function (u) { return prevHand.indexOf(u) < 0; });
+      if (added.length) {
+        ui.newUids = added;
+        var from = document.querySelector('#gDock [data-act="draw"]') || document.getElementById('gBoard');
+        setTimeout(function () { flyCard(from, document.getElementById('gHand'), '🃏'); }, 0);
+        setTimeout(function () { ui.newUids = []; cache.hand = ''; renderAll(); }, 900);
+      }
+    }
+    prevHand = uids;
+  }
+
   function diceTick() {
     var d = state.dice, id = d ? d.id : 0;
     if (diceAnimId !== null && d && !d.rolling && id !== diceAnimId && state.phase === 'playing') {
@@ -273,21 +344,25 @@
     var myTurn = state.you && state.phase === 'playing' && state.turnPlayerId === state.you.id;
     if (myTurn && prevTurnId !== state.turnPlayerId && prevPhase === 'playing') {
       try { if (navigator.vibrate) navigator.vibrate([180, 80, 180]); } catch (e) { /* ignore */ }
-      toast('🎯 ถึงเทิร์นของคุณแล้ว!'); AU.sfx('turn', 150);
+      showBanner('🎯 ถึงเทิร์นของคุณ!', 'mine'); AU.sfx('turn', 150);
+    }
+    if (snd.init && state.phase === 'playing' && prevPhase === 'playing' && !myTurn && prevTurnId !== null && prevTurnId !== state.turnPlayerId) {
+      var tpl = state.players.filter(function (x) { return x.id === state.turnPlayerId; })[0];
+      if (tpl) showBanner('เทิร์นของ ' + esc2(tpl.name), 'other');
     }
     if (state.you && state.you.window && state.phase === 'playing') { try { if (navigator.vibrate) navigator.vibrate(120); } catch (e) { /* ignore */ } }
     if (state.lastPlayed && state.reveal && state.reveal.id !== lastPlayedId) {
       lastPlayedId = state.reveal.id;
       var rv = state.reveal;
-      if (rv.mode !== 'drawn' && rv.cardId !== 'endScene' && rv.playerId !== (state.you && state.you.id) && state.phase === 'playing') toast(rv.playerName + ' ใช้ “' + T[rv.cardId].name + '”');
+      if (snd.init && rv.mode !== 'drawn' && rv.cardId !== 'endScene' && state.phase === 'playing') cardPop(rv.cardId, state.you && rv.playerId === state.you.id ? 'คุณ' : rv.playerName, rv.mode === 'respond' ? 'ตอบโต้ด้วย' : 'ใช้');
     }
     prevTurnId = state.turnPlayerId; prevPhase = state.phase;
 
     var overKey = state.phase === 'over' && state.gameOver ? state.gameOver.title : '';
-    if (overKey !== prevOverKey) { ui.closedOver = false; prevOverKey = overKey; }
+    if (overKey !== prevOverKey) { ui.closedOver = false; prevOverKey = overKey; if (overKey) confetti(); }
     if (state.phase === 'lobby') { ui.closedOver = false; ui.sel = null; ui.menu = null; }
     if (state.you && state.phase !== 'lobby') normalizeSel();
-    if (state.you) { diceTick(); playSounds(); }
+    if (state.you) { diceTick(); handTick(); playSounds(); }
     renderAll();
   }
 
@@ -307,7 +382,7 @@
       var typing = focused || (document.activeElement && document.activeElement.id === 'roomcode');
       if (!(typing && (!ui.room || (state && !state.you)))) setHtml($app, 'app', html);
     } else {
-      if (!board) board = window.BoardView.create($boardEl, { onCell: onCell });
+      if (!board) board = window.BoardView.create($boardEl, { onCell: onCell, onFx: boardFx });
       var d = V.derive(state);
       setHtml($top, 'top', V.topbarHtml(state));
       setHtml($pl, 'pl', V.playersHtml(state));

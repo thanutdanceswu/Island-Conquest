@@ -28,8 +28,8 @@
     el.classList.add('bv');
     el.innerHTML = '<div class="bv-in" style="width:' + W + 'px;height:' + H + 'px">' +
       '<img class="bv-img" alt="" draggable="false" src="/img/board.jpg">' +
-      '<div class="bv-ow"></div><div class="bv-hl"></div><div class="bv-pc"></div></div>';
-    var inner = el.querySelector('.bv-in'), ow = el.querySelector('.bv-ow'), hl = el.querySelector('.bv-hl'), pcl = el.querySelector('.bv-pc');
+      '<div class="bv-ow"></div><div class="bv-hl"></div><div class="bv-pc"></div><div class="bv-fxl"></div></div>';
+    var inner = el.querySelector('.bv-in'), ow = el.querySelector('.bv-ow'), hl = el.querySelector('.bv-hl'), pcl = el.querySelector('.bv-pc'), fxl = el.querySelector('.bv-fxl');
     var view = { s: 1, tx: 0, ty: 0 }, minS = 0.2, maxS = 3.2, zoomed = false;
     var disp = {}, toks = {}, colors = {}, rings = {}, latest = null, lastFx = -1, first = true;
     var queue = [], running = false, lastOwners = '';
@@ -172,30 +172,71 @@
         f(next);
       })();
     }
+    // ---- เอฟเฟกต์ที่ช่อง (วงกระเพื่อม ประกาย ฯลฯ) ลบตัวเองหลังเล่นจบ
+    function burst(cell, kind, color, ms) {
+      var r = cellRect(cell), d = document.createElement('div');
+      d.className = 'fxb fxb-' + kind;
+      d.style.left = r.cx + 'px'; d.style.top = r.cy + 'px';
+      if (color) d.style.setProperty('--c', color);
+      if (kind === 'clash' || kind === 'island' || kind === 'swap') {
+        for (var i = 0; i < 8; i++) { var sp = document.createElement('i'); sp.style.setProperty('--a', (i * 45) + 'deg'); d.appendChild(sp); }
+      }
+      fxl.appendChild(d);
+      setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, ms || 900);
+    }
+    function shake() { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); setTimeout(function () { el.classList.remove('shake'); }, 420); }
+    function hop(k) {
+      var e = toks[k]; if (!e) return;
+      e.classList.remove('hop'); void e.offsetWidth; e.classList.add('hop');
+      setTimeout(function () { e.classList.remove('hop'); }, 140);
+    }
+    function colorOf(pid) { return HEX[colors[pid]] || '#fff'; }
+
     function playFx(f, done) {
-      var k;
+      var k, e;
+      if (opts.onFx) { try { opts.onFx(f); } catch (x) { /* ignore */ } }
       if (f.type === 'move') {
         k = key(f.playerId, f.pieceId);
         if (!disp[k]) return done();
         disp[k].cell = f.path[0]; layout();
         var i = 1;
         (function step() {
-          if (i >= f.path.length) return setTimeout(done, 80);
-          disp[k].cell = f.path[i++]; layout();
+          if (i >= f.path.length) { burst(f.path[f.path.length - 1], 'dust', colorOf(f.playerId), 600); return setTimeout(done, 120); }
+          disp[k].cell = f.path[i++]; layout(); hop(k);
           setTimeout(step, 125);
         })();
       } else if (f.type === 'kick') {
         k = key(f.playerId, f.pieceId);
-        if (disp[k]) { disp[k].cell = -1; layout(); }
-        setTimeout(done, 450);
+        e = toks[k];
+        burst(f.cell, 'clash', '#fb7185', 800); shake();
+        if (e && disp[k] && e.animate) {
+          var base = e.style.transform || '';
+          var fly = e.animate([
+            { transform: base + ' rotate(0deg) scale(1)', opacity: 1 },
+            { transform: base + ' translate(0px,-160px) rotate(540deg) scale(1.25)', opacity: 1, offset: 0.45 },
+            { transform: base + ' translate(' + (Math.random() < 0.5 ? -1 : 1) * 140 + 'px,-60px) rotate(900deg) scale(.2)', opacity: 0 }
+          ], { duration: 650, easing: 'ease-in', fill: 'none' });
+          fly.onfinish = function () { disp[k].cell = -1; layout(); done(); };
+        } else { if (disp[k]) { disp[k].cell = -1; layout(); } setTimeout(done, 450); }
       } else if (f.type === 'release') {
         k = key(f.playerId, f.pieceId);
         disp[k] = { cell: f.to }; layout();
-        setTimeout(done, 400);
+        e = toks[k]; if (e) { e.classList.remove('spawn'); void e.offsetWidth; e.classList.add('spawn'); setTimeout(function () { e.classList.remove('spawn'); }, 700); }
+        burst(f.to, 'spawn', colorOf(f.playerId), 900);
+        setTimeout(done, 500);
       } else if (f.type === 'swap') {
+        burst(f.a.from, 'swap', '#a78bfa', 900); burst(f.b.from, 'swap', '#a78bfa', 900);
         [f.a, f.b].forEach(function (x) { var kk = key(x.playerId, x.pieceId); if (disp[kk]) disp[kk].cell = x.to; });
         pcl.classList.add('slow'); layout();
-        setTimeout(function () { pcl.classList.remove('slow'); done(); }, 650);
+        setTimeout(function () { pcl.classList.remove('slow'); burst(f.a.to, 'dust', '#a78bfa', 600); burst(f.b.to, 'dust', '#a78bfa', 600); done(); }, 700);
+      } else if (f.type === 'clash') {
+        burst(f.cell, 'clash', '#facc15', 800); shake(); setTimeout(done, 380);
+      } else if (f.type === 'shield') {
+        burst(f.cell, 'shield', '#38bdf8', 1100); setTimeout(done, 700);
+      } else if (f.type === 'reflect') {
+        burst(f.cell, 'reflect', '#e879f9', 1000); setTimeout(done, 650);
+      } else if (f.type === 'island') {
+        burst(f.cell, 'island', colorOf(f.ownerId), 1400); setTimeout(done, 700);
       } else done();
     }
 

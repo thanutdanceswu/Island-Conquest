@@ -49,7 +49,7 @@ function createGame(opts) {
       deck: [], discard: [],
       turnPlayerId: null,
       turn: { number: 1, action: null, draws: 0, canRoll: true, moves: [], six: null },
-      frames: [], hitQueue: [], arriveSeq: 0,
+      frames: [], hitQueue: [], arriveSeq: 0, islandOwners: {},
       finallyOverActive: false, endScene: null, gameOver: null,
       lastPlayed: null, reveal: null, dice: null,
       fx: [], logs: [], seq: 0
@@ -200,17 +200,27 @@ function createGame(opts) {
       if (!a || !v || a.pieces[h.attackerPiece].pos !== h.cell || v.pieces[h.victimPiece].pos !== h.cell) continue;
       const lbl = h.source === 'move' ? 'เดินมาชน' : h.source === 'release' ? 'ลงช่องเริ่มต้นชน' : 'ถูกสลับมาชน';
       log('⚔️ ' + a.name + ' ' + lbl + ' ' + v.name + ' ที่ช่อง ' + cellName(h.cell));
+      fx('clash', { cell: h.cell });
       pushFrame({ kind: 'hit', byId: h.attackerId, attackerPiece: h.attackerPiece, victimId: h.victimId, victimPiece: h.victimPiece, cell: h.cell, source: h.source });
       return true;
     }
     return false;
   }
 
+  // แจ้งเหตุการณ์ "ยึดเกาะ" เมื่อเจ้าของเกาะเปลี่ยน (ให้หน้าเว็บทำแอนิเมชัน)
+  function syncIslands() {
+    if (!G.islandOwners) G.islandOwners = {};
+    B.ISLANDS.forEach(function (c) {
+      const o = islandOwner(c), prev = G.islandOwners[c] == null ? null : G.islandOwners[c];
+      if (o !== prev) { G.islandOwners[c] = o; if (o != null) fx('island', { cell: c, ownerId: o }); }
+    });
+  }
+
   function tick() {
     for (let guard = 0; guard < 1000; guard++) {
       if (G.phase !== 'playing') return;
       const t = top();
-      if (!t) { if (nextHit()) continue; checkWin(); return; }
+      if (!t) { if (nextHit()) continue; syncIslands(); checkWin(); return; }
       if (t.waiting.length) return;
       resolveTop();
     }
@@ -219,16 +229,17 @@ function createGame(opts) {
   function applyHit(f) {
     const atk = P(f.byId), vic = P(f.victimId);
     if (!atk || !vic) return;
-    if (f.shielded) { log('🛡️ โล่ของ ' + vic.name + ' ป้องกันไว้ได้ — ตัวเล่นยังอยู่ที่เดิม'); return; }
+    if (f.shielded) { fx('shield', { playerId: vic.id, cell: f.cell }); log('🛡️ โล่ของ ' + vic.name + ' ป้องกันไว้ได้ — ตัวเล่นยังอยู่ที่เดิม'); return; }
     if (f.kind === 'hit') {
       const ap = atk.pieces[f.attackerPiece], vp = vic.pieces[f.victimPiece];
       if (ap.pos !== f.cell || vp.pos !== f.cell) return;
-      if (f.reflected) kick(atk, ap, 'ถูกสะท้อนกลับ');
+      if (f.reflected) { fx('reflect', { cell: f.cell }); kick(atk, ap, 'ถูกสะท้อนกลับ'); }
       else kick(vic, vp, 'ถูก ' + atk.name + ' เดินมาชน');
       return;
     }
     // ไพ่เตะออก
     if (f.reflected) {
+      fx('reflect', { cell: f.cell });
       const t = f.reflectPiece != null ? atk.pieces[f.reflectPiece] : null;
       if (t && onBoard(t) && !B.safe[t.pos]) kick(atk, t, 'ถูกสะท้อนกลับ');
       else log('🪞 สะท้อนกลับแล้ว แต่ ' + atk.name + ' ไม่มีตัวเล่นที่เตะได้ — ไม่มีใครถูกเตะ');
@@ -247,6 +258,7 @@ function createGame(opts) {
     switch (f.cardId) {
       case 'stop': {
         const target = G.frames.pop(); // ยกเลิกเฟรมที่อยู่ใต้
+        fx('stop', { byId: owner.id });
         if (target) log('✋ "หยุดเดี๋ยวนี้" ของ ' + owner.name + ' ยกเลิก "' + cname(target.cardId) + '" ได้สำเร็จ');
         const gp = top();
         if (gp) openWindow(gp); // ถ้าไพ่ที่ถูกหยุดเป็นไพ่ตอบโต้ ให้เฟรมเดิมเปิดหน้าต่างใหม่
@@ -719,7 +731,7 @@ function createGame(opts) {
       lastPlayed: G.lastPlayed, reveal: G.reveal, dice: G.dice,
       frames: G.frames.map(publicFrame),
       waitingCount: t ? t.waiting.length : 0,
-      fx: G.fx.slice(-12),
+      fx: G.fx.slice(-12).map(function (f) { return f.type === 'steal' && !(me && me.id === f.thiefId) ? { id: f.id, type: f.type, thiefId: f.thiefId, victimId: f.victimId } : f; }),
       logs: G.logs.slice(-60), ownerId: ownerId(), you: null
     };
     if (me) {
