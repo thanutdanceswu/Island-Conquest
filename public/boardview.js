@@ -90,7 +90,16 @@
         var was = count; count = Object.keys(ptrs).length; pinch = null;
         if (e.type === 'pointerup' && was === 1 && !moved && opts.onCell) {
           var p = toImg(e.clientX, e.clientY), cell = cellFromPoint(p.x, p.y);
-          if (cell >= 0) opts.onCell(cell, keysAt(cell));
+          if (cell >= 0) {
+            // หมากหลายตัวอยู่ช่องเดียวกัน: ส่งตัวที่ถูกแตะ (ใกล้นิ้วที่สุด) ไปด้วย
+            var ks = keysAt(cell), near = null, best = 1e9;
+            ks.forEach(function (k) {
+              var te = toks[k]; if (!te) return;
+              var r = te.getBoundingClientRect(), d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+              if (d < best) { best = d; near = k; }
+            });
+            opts.onCell(cell, ks, near);
+          }
         }
         if (count === 1) { var k = Object.keys(ptrs)[0]; sx = ptrs[k].x; sy = ptrs[k].y; moved = true; }
       };

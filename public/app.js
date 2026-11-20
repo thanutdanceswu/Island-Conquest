@@ -55,13 +55,6 @@
   function esc2(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   // ---- แบนเนอร์เทิร์น / ป๊อปอัปไพ่ / ลูกปลิวไพ่ขโมย / ไพ่ใหม่ / กระดาษสี
   var bannerEl = null, bannerT = null, popEl = null, popT = null;
-  // มือถือแนวตั้ง: กระดานกว้างเกือบเต็มจอแต่เตี้ย พอถึงเทิร์นให้ซูมเข้าหาตัวหมากของเรา (ถ้ายังไม่ได้ซูมเอง)
-  function focusMine(state) {
-    if (!board || board.isZoomed() || window.innerWidth >= window.innerHeight) return;
-    var me = state.players.filter(function (x) { return state.you && x.id === state.you.id; })[0];
-    var pc = me && me.pieces.filter(function (q) { return q.pos >= 0; })[0];
-    if (pc) setTimeout(function () { if (board && !board.isZoomed()) board.focusCell(pc.pos, 0); }, 700);
-  }
   function showBanner(html, kind) {
     if (!bannerEl) { bannerEl = document.createElement('div'); bannerEl.id = 'banner'; document.body.appendChild(bannerEl); }
     clearTimeout(bannerT); bannerEl.className = ''; bannerEl.innerHTML = '<span class="bn">' + html + '</span>'; void bannerEl.offsetWidth;
@@ -281,37 +274,55 @@
   }
 
   // ---------------------------------------------------------------- การแตะบนกระดาน
-  function onCell(cell) {
+  function nearPiece(near) {
+    if (!near) return null; var i = near.lastIndexOf(':');
+    if (i < 0) return null;
+    var pid = near.slice(0, i), pl = state && state.players.filter(function (x) { return String(x.id) === pid; })[0];
+    return pl ? { playerId: pl.id, pieceId: +near.slice(i + 1) } : null;
+  }
+  function onCell(cell, keys, near) {
     if (!state || !state.you || state.phase !== 'playing') return;
+    var np = nearPiece(near);
     var d = V.derive(state), sel = ui.sel, mid = state.you.id;
     if (sel && sel.k === 'card' && (sel.cardId === 'kickOut' || sel.cardId === 'boost' || sel.cardId === 'swap')) {
       var cand = eligiblePieces(sel.cardId).filter(function (e) { return e.pos === cell; });
       if (!cand.length) { toast(sel.cardId === 'kickOut' && pieceOnSafeOrOwn(cell) ? 'ช่องนี้เตะไม่ได้ (เซฟโซน หรือเป็นของคุณ)' : 'แตะตัวเล่นที่เลือกได้ (มีวงเรืองแสง)'); return; }
-      var fresh = cand.filter(function (e) { return !sel.picks.some(function (p) { return samePiece(p, e); }); });
-      // แตะซ้ำที่ตัวที่เลือกอยู่ = ยกเลิกการเลือกตัวนั้น
-      if (!fresh.length) { sel.picks = sel.picks.filter(function (p) { return !cand.some(function (e) { return samePiece(p, e); }); }); renderAll(); return; }
-      var pick = fresh[0];
       var max = sel.cardId === 'swap' ? 2 : 1;
+      var tapped = np ? cand.filter(function (e) { return samePiece(e, np); })[0] : null;
+      var isPicked = function (e) { return sel.picks.some(function (p) { return samePiece(p, e); }); };
+      var pick;
+      if (tapped) {
+        // แตะตัวไหนเลือกตัวนั้น แตะซ้ำตัวที่เลือกอยู่ = ยกเลิก
+        if (isPicked(tapped)) { sel.picks = sel.picks.filter(function (p) { return !samePiece(p, tapped); }); renderAll(); return; }
+        pick = tapped;
+      } else {
+        var fresh = cand.filter(function (e) { return !isPicked(e); });
+        if (!fresh.length) { sel.picks = sel.picks.filter(function (p) { return !cand.some(function (e) { return samePiece(p, e); }); }); renderAll(); return; }
+        // ตัวที่สองของการสลับ: เลือกตัวที่เป็นของคนอื่นก่อน (ไม่ให้ติดตัวของเราเอง)
+        var first = sel.picks[0];
+        pick = (first && fresh.filter(function (e) { return e.playerId !== first.playerId; })[0]) || fresh[0];
+      }
       if (max === 1) sel.picks = [{ playerId: pick.playerId, pieceId: pick.pieceId }];
-      else sel.picks.push({ playerId: pick.playerId, pieceId: pick.pieceId });
+      else { if (sel.picks.length >= max) sel.picks.shift(); sel.picks.push({ playerId: pick.playerId, pieceId: pick.pieceId }); }
       renderAll(); return;
     }
     if (d.mv) {
       var mine = me();
       var ownHere = mine.pieces.filter(function (pc) { return pc.pos === cell; });
+      var tappedOwn = np && np.playerId === mid ? ownHere.filter(function (pc) { return pc.id === np.pieceId; })[0] : null;
       var chosen = sel && sel.k === 'move' && sel.pieceId != null ? sel.pieceId : null;
       if (chosen != null) {
         var pcs = mine.pieces[chosen];
         if (reach(pcs.pos, d.mv.steps).indexOf(cell) >= 0) { sel.dest = cell; renderAll(); return; }
         if (d.mv.pieceId == null && ownHere.length) {
-          var nxt = ownHere.filter(function (pc) { return pc.id !== chosen; })[0] || ownHere[0];
+          var nxt = tappedOwn || ownHere.filter(function (pc) { return pc.id !== chosen; })[0] || ownHere[0];
           ui.sel = { k: 'move', pieceId: nxt.id, dest: null }; renderAll(); return;
         }
         toast('เดินไปช่องนั้นให้ครบ ' + d.mv.steps + ' ก้าวพอดีไม่ได้ — แตะช่องที่ไฮไลต์');
         return;
       }
       if (d.mv.pieceId == null) {
-        if (ownHere.length) { ui.sel = { k: 'move', pieceId: ownHere[0].id, dest: null }; renderAll(); }
+        if (ownHere.length) { ui.sel = { k: 'move', pieceId: (tappedOwn || ownHere[0]).id, dest: null }; renderAll(); }
         else toast('แตะตัวเล่นของคุณก่อน');
       }
     }
@@ -352,7 +363,6 @@
     if (myTurn && prevTurnId !== state.turnPlayerId && prevPhase === 'playing') {
       try { if (navigator.vibrate) navigator.vibrate([180, 80, 180]); } catch (e) { /* ignore */ }
       showBanner('🎯 ถึงเทิร์นของคุณ!', 'mine'); AU.sfx('turn', 150);
-      focusMine(state);
     }
     if (snd.init && state.phase === 'playing' && prevPhase === 'playing' && !myTurn && prevTurnId !== null && prevTurnId !== state.turnPlayerId) {
       var tpl = state.players.filter(function (x) { return x.id === state.turnPlayerId; })[0];
