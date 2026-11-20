@@ -55,6 +55,13 @@
   function esc2(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   // ---- แบนเนอร์เทิร์น / ป๊อปอัปไพ่ / ลูกปลิวไพ่ขโมย / ไพ่ใหม่ / กระดาษสี
   var bannerEl = null, bannerT = null, popEl = null, popT = null;
+  // มือถือแนวตั้ง: กระดานกว้างเกือบเต็มจอแต่เตี้ย พอถึงเทิร์นให้ซูมเข้าหาตัวหมากของเรา (ถ้ายังไม่ได้ซูมเอง)
+  function focusMine(state) {
+    if (!board || board.isZoomed() || window.innerWidth >= window.innerHeight) return;
+    var me = state.players.filter(function (x) { return state.you && x.id === state.you.id; })[0];
+    var pc = me && me.pieces.filter(function (q) { return q.pos >= 0; })[0];
+    if (pc) setTimeout(function () { if (board && !board.isZoomed()) board.focusCell(pc.pos, 0); }, 700);
+  }
   function showBanner(html, kind) {
     if (!bannerEl) { bannerEl = document.createElement('div'); bannerEl.id = 'banner'; document.body.appendChild(bannerEl); }
     clearTimeout(bannerT); bannerEl.className = ''; bannerEl.innerHTML = '<span class="bn">' + html + '</span>'; void bannerEl.offsetWidth;
@@ -345,6 +352,7 @@
     if (myTurn && prevTurnId !== state.turnPlayerId && prevPhase === 'playing') {
       try { if (navigator.vibrate) navigator.vibrate([180, 80, 180]); } catch (e) { /* ignore */ }
       showBanner('🎯 ถึงเทิร์นของคุณ!', 'mine'); AU.sfx('turn', 150);
+      focusMine(state);
     }
     if (snd.init && state.phase === 'playing' && prevPhase === 'playing' && !myTurn && prevTurnId !== null && prevTurnId !== state.turnPlayerId) {
       var tpl = state.players.filter(function (x) { return x.id === state.turnPlayerId; })[0];
@@ -526,6 +534,12 @@
     if (!el || el === document.body) return;
     var fn = handlers[el.getAttribute('data-act')];
     if (fn) { if (el.tagName !== 'INPUT') ev.preventDefault(); fn(el); }
+  });
+  document.addEventListener('input', function (ev) {
+    var t = ev.target; if (!t || !t.getAttribute) return;
+    var k = t.getAttribute('data-vol'); if (!k || !AU.setVolume) return;
+    AU.setVolume(k, t.value / 100);
+    if (k === 'sfx') AU.sfx('step');
   });
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target) { if (ev.target.id === 'name') doJoin(); else if (ev.target.id === 'roomcode') handlers.enterRoom(); } });
 

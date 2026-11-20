@@ -318,7 +318,7 @@
     }
     if (state.you) owner += '<div class="prow" style="margin:8px 0"><button class="btn btn-soft" data-act="exitRoom">🚪 ออกจากห้องนี้ (กลับหน้าแรก)</button></div>';
     return '<div class="ov" data-act="closeRules"><div class="modal wide" data-stop="1"><button class="x" data-act="closeRules">✕</button>' +
-      '<h3 class="title" style="margin:0 0 6px">📖 กติกาย่อ</h3>' + owner +
+      '<h3 class="title" style="margin:0 0 6px">📖 กติกาย่อ</h3>' + owner + volBox() +
       '<ul class="tips"><li><span>เทิร์นละ 1 ทางเลือก: ทอยเต๋าแล้วเดิน หรือ จั่วไพ่ 1–2 ใบ (ใช้ไพ่ได้ตลอดเทิร์น แม้หลังทอย)</span></li>' +
       '<li><span>เดินครบแต้มพอดี เลี้ยวได้ทุกช่อง ห้ามเฉียง ห้ามเหยียบช่องเดิมซ้ำ หยุดตรงไหนก็ได้ที่เดินครบ</span></li>' +
       '<li><span>ทอยได้ 6: นำตัวออกจากฐาน (ไปช่องเริ่มต้นตามมุม) หรือเดิน 12 ช่อง แล้วทอยต่อได้</span></li>' +
@@ -327,6 +327,12 @@
       '<h4 style="margin:12px 0 6px;color:#334155">ไพ่ทั้ง 72 ใบ</h4>' + items +
       '<h4 style="margin:16px 0 6px;color:#334155">คะแนนช่อง (ตัดสินตอนปิดฉาก)</h4><div class="score">' + score + '</div>' +
       '<p class="muted">ตัดสิน: 1) เกาะมากที่สุด 2) คะแนนรวมบนกระดาน 3) เท่ากัน = เสมอ (ตัวในฐานไม่นับ)</p></div></div>';
+  }
+
+  function volBox() {
+    var A = root.IC && root.IC.audio; if (!A || !A.getVolume) return '';
+    function row(kind, label) { return '<label class="volrow"><span>' + label + '</span><input type="range" min="0" max="100" step="5" value="' + Math.round(A.getVolume(kind) * 100) + '" data-vol="' + kind + '" aria-label="' + label + '"></label>'; }
+    return '<div class="volbox"><b>🔊 เสียง</b>' + row('music', 'เพลงและคลื่น') + row('sfx', 'เสียงเอฟเฟกต์') + '</div>';
   }
 
   function overModal(state) {

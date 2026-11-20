@@ -10,13 +10,15 @@
     return null;
   }
   var on = ls('ic_sound') !== '0';
+  function lv(k, d) { var v = parseFloat(ls(k)); return isNaN(v) ? d : Math.min(1, Math.max(0, v)); }
+  var vm = lv('ic_vol_music', 1), vs = lv('ic_vol_sfx', 1);
   var unlocked = false, els = [], ctx = null, listeners = [], inGame = false;
 
   function build() {
     if (els.length) return;
     TRACKS.forEach(function (t) {
       var a = new Audio(t.src);
-      a.loop = true; a.preload = t.gameOnly ? 'none' : 'auto'; a.volume = t.vol;
+      a.loop = true; a.preload = t.gameOnly ? 'none' : 'auto'; a.volume = Math.min(1, t.vol * vm);
       els.push(a);
     });
   }
@@ -64,7 +66,7 @@
     o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t0);
     if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(vol || 0.1, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, (vol || 0.1) * vs), t0 + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     o.connect(g); g.connect(c.destination);
     o.start(t0); o.stop(t0 + dur + 0.03);
@@ -88,6 +90,13 @@
     if (delay) setTimeout(function () { if (on) SFX[name](); }, delay); else SFX[name]();
   }
 
+  function setVolume(kind, v) {
+    v = Math.min(1, Math.max(0, +v || 0));
+    if (kind === 'music') { vm = v; ls('ic_vol_music', String(v)); els.forEach(function (a, i) { a.volume = Math.min(1, TRACKS[i].vol * vm); }); }
+    else { vs = v; ls('ic_vol_sfx', String(v)); }
+  }
+  function getVolume(kind) { return kind === 'music' ? vm : vs; }
+
   root.IC = root.IC || {};
-  root.IC.audio = { setInGame: setInGame, isOn: function () { return on; }, toggle: toggle, sfx: sfx, onChange: function (f) { listeners.push(f); } };
+  root.IC.audio = { setInGame: setInGame, isOn: function () { return on; }, toggle: toggle, setVolume: setVolume, getVolume: getVolume, sfx: sfx, onChange: function (f) { listeners.push(f); } };
 })(window);
