@@ -171,7 +171,7 @@ function createGame(opts) {
   function eligible(f, p) {
     const out = [];
     p.hand.forEach(function (c) {
-      if (c.id === 'stop') { if (f.kind === 'card' && f.byId !== p.id) out.push(c.uid); }
+      if (c.id === 'stop') { if ((f.kind === 'card' || f.kind === 'hit') && f.byId !== p.id) out.push(c.uid); } // Stop หยุดได้ทั้งไพ่และการชนจากการเดิน
       else if (c.id === 'shield' || c.id === 'reflect') {
         if (hitLike(f) && f.victimId === p.id && !f.shielded && !f.reflected) out.push(c.uid);
       }
@@ -259,7 +259,7 @@ function createGame(opts) {
       case 'stop': {
         const target = G.frames.pop(); // ยกเลิกเฟรมที่อยู่ใต้
         fx('stop', { byId: owner.id });
-        if (target) log('✋ "หยุดเดี๋ยวนี้" ของ ' + owner.name + ' ยกเลิก "' + cname(target.cardId) + '" ได้สำเร็จ');
+        if (target) log('✋ "หยุดเดี๋ยวนี้" ของ ' + owner.name + ' ยกเลิก' + (target.kind === 'hit' ? 'การปะทะ — ตัวเล่นอยู่ร่วมช่องเดิม' : ' "' + cname(target.cardId) + '"') + ' ได้สำเร็จ');
         const gp = top();
         if (gp) openWindow(gp); // ถ้าไพ่ที่ถูกหยุดเป็นไพ่ตอบโต้ ให้เฟรมเดิมเปิดหน้าต่างใหม่
         return;
